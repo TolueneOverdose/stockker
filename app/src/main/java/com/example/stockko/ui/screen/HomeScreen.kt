@@ -30,6 +30,7 @@ data class HomeState(
     val searchQuery: String = "",
     val resultText: String = "Enter a stock symbol to start",
     val isSearching: Boolean = false,
+
     val recentSearches: List<String> = emptyList(),
     val trendingStocks: List<StockItem> = emptyList(),
     val topGainers: List<StockItem> = emptyList(),

@@ -1,20 +1,23 @@
 package com.example.stockko.ui.components
 
-
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Typeface
 import android.view.ViewGroup
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
 import androidx.compose.ui.platform.LocalContext
 import com.example.stockko.data.model.StockHistoricalData
+import java.text.DecimalFormat
 
 /**
  * Stock Chart component using MPAndroidChart library
@@ -45,25 +48,52 @@ fun StockChart(chartData: List<StockHistoricalData>, modifier: Modifier = Modifi
 private fun createLineChart(context: Context): LineChart {
     return LineChart(context).apply {
         description.isEnabled = false
-        legend.isEnabled = true
+        legend.isEnabled = false
         setTouchEnabled(true)
         setScaleEnabled(true)
         setPinchZoom(true)
         setDrawGridBackground(false)
+        setBackgroundColor(Color.TRANSPARENT)
 
-        // Configure X axis
+        // Improve margins and padding
+        setViewPortOffsets(60f, 40f, 60f, 80f)
+
+        // Disable highlighting
+        isHighlightPerTapEnabled = false
+        isHighlightPerDragEnabled = false
+
+        // Configure X axis with better styling
         xAxis.apply {
             position = XAxis.XAxisPosition.BOTTOM
             setDrawGridLines(false)
+            setDrawAxisLine(true)
+            axisLineColor = Color.parseColor("#E0E0E0")
+            axisLineWidth = 1f
             granularity = 1f
-            labelCount = 5
-            textColor = Color.GRAY
+            labelCount = 6
+            textColor = Color.parseColor("#757575")
+            textSize = 11f
+            typeface = Typeface.DEFAULT
+            yOffset = 10f
         }
 
-        // Configure left Y axis
+        // Configure left Y axis with currency formatting
         axisLeft.apply {
             setDrawGridLines(true)
-            textColor = Color.GRAY
+            setDrawAxisLine(false)
+            gridColor = Color.parseColor("#F0F0F0")
+            gridLineWidth = 0.5f
+            textColor = Color.parseColor("#757575")
+            textSize = 11f
+            typeface = Typeface.DEFAULT
+            setLabelCount(6, false)
+            xOffset = 10f
+            valueFormatter = object : ValueFormatter() {
+                private val format = DecimalFormat("$#,##0.00")
+                override fun getFormattedValue(value: Float): String {
+                    return format.format(value)
+                }
+            }
         }
 
         // Configure right Y axis
@@ -71,8 +101,8 @@ private fun createLineChart(context: Context): LineChart {
             isEnabled = false
         }
 
-        // Animation
-        animateX(1000)
+        // Smooth animation
+        animateX(800)
     }
 }
 
@@ -87,29 +117,55 @@ private fun updateChartWithData(chart: LineChart, data: List<StockHistoricalData
         Entry(index.toFloat(), item.close.toFloat())
     }
 
-    // Configure the dataset
+    // Determine trend colors
+    val isPositiveTrend = entries.first().y < entries.last().y
+    val lineColor = if (isPositiveTrend) {
+        Color.parseColor("#4CAF50") // Material Green
+    } else {
+        Color.parseColor("#F44336") // Material Red
+    }
+    val fillColor = if (isPositiveTrend) {
+        Color.parseColor("#E8F5E8") // Light green
+    } else {
+        Color.parseColor("#FFEBEE") // Light red
+    }
+
+    // Configure the dataset with improved styling
     val dataSet = LineDataSet(entries, "Stock Price").apply {
-        color = if (entries.first().y < entries.last().y) {
-            Color.GREEN
-        } else {
-            Color.RED
-        }
-        lineWidth = 2f
+        color = lineColor
+        lineWidth = 3f
         setDrawCircles(false)
         setDrawValues(false)
         mode = LineDataSet.Mode.CUBIC_BEZIER
-        cubicIntensity = 0.2f
-        fillAlpha = 65
-        fillColor = color
+        cubicIntensity = 0.15f
+        fillAlpha = 30
+        setFillColor(fillColor)
         setDrawFilled(true)
+
+        // Add highlight styling
+        setDrawHorizontalHighlightIndicator(false)
+        setDrawVerticalHighlightIndicator(false)
     }
 
+    // Format X-axis labels to show cleaner dates
     chart.xAxis.valueFormatter = IndexAxisValueFormatter(
-        data.map { it.date.substringAfterLast('-') } // Show only day from the date
+        data.map { dateString ->
+            // Extract day and month from date string (assuming YYYY-MM-DD format)
+            val parts = dateString.date.split("-")
+            if (parts.size >= 3) {
+                "${parts[2]}/${parts[1]}" // DD/MM format
+            } else {
+                dateString.date.substringAfterLast('-') // Fallback to original
+            }
+        }
     )
 
     // Set the LineData to the chart
     chart.data = LineData(dataSet)
+
+    // Optimize chart display
+    chart.setVisibleXRangeMaximum(30f) // Show max 30 data points at once
+    chart.moveViewToX(entries.size.toFloat()) // Move to latest data
 
     // Refresh the chart
     chart.invalidate()

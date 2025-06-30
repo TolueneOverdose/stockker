@@ -45,7 +45,7 @@ fun StockInfoCard(stock: com.example.stockko.data.model.StockItem) {
 
             InfoRow(
                 label = "Change",
-                value = "$changePrefix${stock.priceChange} (${changePrefix}${stock.percentChange}%)",
+                value = "$changePrefix${stock.priceChange} (${changePrefix}0.00%)",
                 valueColor = changeColor
             )
 
